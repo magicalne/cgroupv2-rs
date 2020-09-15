@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 users = "0.10"
+thiserror = "1.0.20"
