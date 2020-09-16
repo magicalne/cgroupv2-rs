@@ -12,8 +12,14 @@ pub fn read_file_into_string(path: &Path) -> Result<String> {
     match std::fs::File::open(path) {
         Ok(mut file) => {
             let mut buf = String::new();
-            let _ = file.read_to_string(&mut buf);
-            Ok(buf)
+            match file.read_to_string(&mut buf) {
+                Ok(_) => {
+                    Ok(buf)
+                },
+                Err(err) => {
+                    Err(CGroupError::FileSystemFailure(err))
+                }
+            }
         },
         Err(err) => {
             Err(CGroupError::FileSystemFailure(err))
@@ -21,24 +27,22 @@ pub fn read_file_into_string(path: &Path) -> Result<String> {
     }
 }
 
-pub fn read_space_separated_values<T: FromStr>(path: &Path)
-    -> Result<Vec<std::result::Result<T, <T>::Err>>> {
-    let content = read_file_into_string(path)?;
-    let splits = content
+pub fn read_space_separated_values<T: FromStr>(content: String) -> Vec<T> {
+    content
         .split_whitespace()
         .into_iter()
         .map(|s| T::from_str(s))
-        .collect();
-    Ok(splits)
+        .filter_map(std::result::Result::ok)
+        .collect()
 }
 
-//TODO return type should be simple
-pub fn read_single_value<T: FromStr>(path: &Path) -> Result<std::result::Result<T, <T>::Err>> {
-    let content = read_file_into_string(path)?;
-    let len = content.len();
-    if len > 1 {
-        Ok(T::from_str(&content[..len-1]))
-    } else {
-        Err(CGroupError::UnknownField(content))
-    }
+pub fn read_newline_separated_values<T: FromStr>(content: String) -> Vec<T>  {
+    content.split('\n')
+        .map(|s| T::from_str(s))
+        .filter_map(std::result::Result::ok)
+        .collect()
+}
+
+pub fn read_single_value<T: FromStr>(content: String) -> std::result::Result<T, <T>::Err> {
+    T::from_str(&content[..])
 }

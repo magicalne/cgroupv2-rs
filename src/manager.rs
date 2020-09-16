@@ -64,6 +64,7 @@ fn get_delegate_path(mount_point: &str) -> String {
 }
 
 #[cfg(test)]
+#[allow(unused_must_use)]
 mod tests {
     use crate::manager::Manager;
 
@@ -92,9 +93,14 @@ mod tests {
         dbg!(&child);
         let child = child.unwrap();
         let c_group = child.cgroup();
-        dbg!(c_group.subtree_control());
-        dbg!(c_group.controllers());
-        dbg!(c_group.cg_type());
+        let result = c_group.subtree_control();
+        dbg!(result);
+        let result = c_group.controllers();
+        dbg!(result);
+        let result = c_group.cg_type();
+        dbg!(result);
+        let result = c_group.procs();
+        dbg!(result);
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
     }
