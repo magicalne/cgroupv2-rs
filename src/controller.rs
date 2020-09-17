@@ -6,6 +6,12 @@ pub enum ControllerType {
     CPUSET, CPU, IO, MEMORY, PIDS
 }
 
+impl ControllerType {
+    pub fn all() -> Vec<ControllerType> {
+        vec![Self::CPUSET, Self::CPU, Self::IO, Self::MEMORY, Self::PIDS]
+    }
+}
+
 impl FromStr for ControllerType {
     type Err = CGroupError;
 
@@ -18,5 +24,18 @@ impl FromStr for ControllerType {
             "pids" => Ok(ControllerType::PIDS),
             _ => Err(CGroupError::UnknownField(String::from(s)))
         }
+    }
+}
+
+impl ToString for ControllerType {
+    fn to_string(&self) -> String {
+        let s = match self {
+            ControllerType::CPUSET => "cpuset",
+            ControllerType::CPU => "cpu",
+            ControllerType::IO => "io",
+            ControllerType::MEMORY => "memory",
+            ControllerType::PIDS => "pids",
+        };
+        s.to_string()
     }
 }

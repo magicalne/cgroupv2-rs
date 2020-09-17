@@ -1,4 +1,5 @@
 use std::{
+    fs,
     str::FromStr,
     path::{
         Path,
@@ -43,6 +44,38 @@ impl <'a> CGroup<'a> {
         path.push("cgroup.subtree_control");
         let content = read_file_into_string(path.as_path())?;
         Ok(read_space_separated_values(content))
+    }
+
+    pub fn set_subtree_control(&self,
+                               enables: Vec<ControllerType>,
+                               disables: Option<Vec<ControllerType>>
+    ) -> Result<()> {
+        let mut line: String = enables
+            .iter()
+            .map(|e| {
+                let mut s = e.to_string();
+                s.insert_str(0, "+");
+                return s
+            })
+            .collect::<Vec<String>>()
+            .join(" ");
+        if let Some(disables) = disables {
+            let _line = disables
+                .iter()
+                .map(|e| {
+                    let mut s = e.to_string();
+                    s.insert_str(0, "-");
+                    return s
+                })
+                .collect::<Vec<String>>()
+                .join(" ");
+            line.push(' ');
+            line.push_str(&_line);
+        };
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.subtree_control");
+        fs::write(path.as_path(), line)
+            .map_err(|e| CGroupError::FileSystemFailure(e))
     }
 
     ///cgroup.type

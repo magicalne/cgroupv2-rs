@@ -67,6 +67,7 @@ fn get_delegate_path(mount_point: &str) -> String {
 #[allow(unused_must_use)]
 mod tests {
     use crate::manager::Manager;
+    use crate::controller::ControllerType;
 
     #[test]
     fn enabled_controllers() {
@@ -93,6 +94,11 @@ mod tests {
         dbg!(&child);
         let child = child.unwrap();
         let c_group = child.cgroup();
+
+        let enables = vec![ControllerType::CPU, ControllerType::MEMORY];
+        let disables = Some(vec![ControllerType::IO]);
+        let result = c_group.set_subtree_control(enables, disables);
+        dbg!(result);
         let result = c_group.subtree_control();
         dbg!(result);
         let result = c_group.controllers();
