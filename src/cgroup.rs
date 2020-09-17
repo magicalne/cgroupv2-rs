@@ -1,5 +1,8 @@
 use std::{
-    fs,
+    fs::{
+        self,
+        OpenOptions
+    },
     str::FromStr,
     path::{
         Path,
@@ -15,10 +18,11 @@ use crate::{
     util::{
         read_file_into_string,
         read_single_value,
-        read_space_separated_values
+        read_space_separated_values,
+        read_newline_separated_values
     }
 };
-use crate::util::read_newline_separated_values;
+use std::io::Write;
 
 pub struct CGroup<'a> {
     path: &'a Path
@@ -92,6 +96,28 @@ impl <'a> CGroup<'a> {
         path.push("cgroup.procs");
         let content = read_file_into_string(path.as_path())?;
         Ok(read_newline_separated_values(content))
+    }
+
+    ///cgroup.procs
+    pub fn add_pid(&self, pid: u32) -> Result<()> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.procs");
+        let mut file = OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .map_err(|err| CGroupError::FileSystemFailure(err))?;
+        match file.write(&pid.to_string().as_bytes()) {
+            Ok(size) => {
+                if size == 0 {
+                    Err(CGroupError::WriteZeroByte)
+                } else {
+                    Ok(())
+                }
+             },
+            Err(err) => {
+                Err(CGroupError::FileSystemFailure(err))
+            }
+        }
     }
 }
 

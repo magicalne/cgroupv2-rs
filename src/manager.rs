@@ -105,6 +105,10 @@ mod tests {
         dbg!(result);
         let result = c_group.cg_type();
         dbg!(result);
+        let pid = std::process::id();
+        dbg!(pid);
+        let result = c_group.add_pid(pid);
+        dbg!(result);
         let result = c_group.procs();
         dbg!(result);
         let result = manager.delete_child("cgv2");

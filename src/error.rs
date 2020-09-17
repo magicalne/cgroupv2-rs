@@ -5,7 +5,8 @@ pub enum CGroupError {
     FileSystemFailure(#[from] std::io::Error),
     #[error("unknown controller")]
     UnknownField(String),
-    //TODO
+    #[error("write 0 byte")]
+    WriteZeroByte,
 
     #[error("the data for key `{0}` is not available")]
     Redaction(String),
