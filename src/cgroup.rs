@@ -79,7 +79,7 @@ impl <'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.subtree_control");
         fs::write(path.as_path(), line)
-            .map_err(|e| CGroupError::FileSystemFailure(e))
+            .map_err(|e| CGroupError::FSErr(e))
     }
 
     ///cgroup.type
@@ -105,7 +105,7 @@ impl <'a> CGroup<'a> {
         let mut file = OpenOptions::new()
             .append(true)
             .open(&path)
-            .map_err(|err| CGroupError::FileSystemFailure(err))?;
+            .map_err(|err| CGroupError::FSErr(err))?;
         match file.write(&pid.to_string().as_bytes()) {
             Ok(size) => {
                 if size == 0 {
@@ -115,9 +115,46 @@ impl <'a> CGroup<'a> {
                 }
              },
             Err(err) => {
-                Err(CGroupError::FileSystemFailure(err))
+                Err(CGroupError::FSErr(err))
             }
         }
+    }
+
+    ///cgroup.threads
+    pub fn threads(&self) -> Result<Vec<i32>> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.threads");
+        let content = read_file_into_string(path.as_path())?;
+        Ok(read_newline_separated_values(content))
+    }
+
+    pub fn add_tid(&self, tid: u32) -> Result<()> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.threads");
+        let mut file = OpenOptions::new()
+            .append(true)
+            .open(&path)
+            .map_err(|err| CGroupError::FSErr(err))?;
+        match file.write(&tid.to_string().as_bytes()) {
+            Ok(size) => {
+                if size == 0 {
+                    Err(CGroupError::WriteZeroByte)
+                } else {
+                    Ok(())
+                }
+            },
+            Err(err) => {
+                Err(CGroupError::FSErr(err))
+            }
+        }
+    }
+
+    ///cgroup.events
+    pub fn events(&self) -> Result<Vec<CGroupEvent>> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.events");
+        let content = read_file_into_string(path.as_path())?;
+        Ok(read_newline_separated_values(content))
     }
 }
 
@@ -140,5 +177,33 @@ impl FromStr for CGroupType {
             "threaded\n" => Ok(CGroupType::Threaded),
             _ => Err(CGroupError::UnknownField(String::from(s)))
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum CGroupEvent {
+    Populated(bool),
+    Frozen(bool)
+}
+
+impl FromStr for CGroupEvent {
+    type Err = CGroupError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let mut splits = s.split_whitespace();
+        if let Some(key) = splits.next() {
+            if let Some(val) = splits.next() {
+                let val = match val {
+                    "1" => true,
+                    _ => false
+                };
+                return match key {
+                    "populated" => Ok(CGroupEvent::Populated(val)),
+                    "frozen" => Ok(CGroupEvent::Frozen(val)),
+                    _ => Err(CGroupError::UnknownField(String::from(s)))
+                }
+            }
+        }
+        return Err(CGroupError::UnknownField(String::from(s)))
     }
 }

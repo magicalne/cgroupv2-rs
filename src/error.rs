@@ -2,7 +2,7 @@ use thiserror::Error;
 #[derive(Error, Debug)]
 pub enum CGroupError {
     #[error("cannot open file")]
-    FileSystemFailure(#[from] std::io::Error),
+    FSErr(#[from] std::io::Error),
     #[error("unknown controller")]
     UnknownField(String),
     #[error("write 0 byte")]

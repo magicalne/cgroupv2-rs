@@ -29,7 +29,7 @@ impl Manager {
                 })
             },
             Err(err) => {
-                Err(CGroupError::FileSystemFailure(err))
+                Err(CGroupError::FSErr(err))
             }
         }
     }
@@ -39,7 +39,7 @@ impl Manager {
         path.push(cgroup_name);
         return match fs::remove_dir(path) {
             Ok(()) => Ok(()),
-            Err(err) => Err(CGroupError::FileSystemFailure(err))
+            Err(err) => Err(CGroupError::FSErr(err))
         }
     }
 }
@@ -107,9 +107,11 @@ mod tests {
         dbg!(result);
         let pid = std::process::id();
         dbg!(pid);
-        let result = c_group.add_pid(pid);
-        dbg!(result);
         let result = c_group.procs();
+        dbg!(result);
+        let result = c_group.threads();
+        dbg!(result);
+        let result = c_group.events();
         dbg!(result);
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
