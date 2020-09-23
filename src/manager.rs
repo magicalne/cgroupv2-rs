@@ -118,6 +118,12 @@ mod tests {
         c_group.set_max_descendants(15);
         let result = c_group.max_descendants();
         dbg!(result);
+        let result = c_group.max_depth();
+        dbg!(result);
+        let result = c_group.set_max_depth(16);
+        dbg!(result);
+        let result = c_group.max_depth();
+        dbg!(result);
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
     }

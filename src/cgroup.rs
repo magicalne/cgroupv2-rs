@@ -158,7 +158,7 @@ impl <'a> CGroup<'a> {
     }
 
     ///cgroup.max.descendants
-    pub fn max_descendants(&self) -> Result<MaxDescendants> {
+    pub fn max_descendants(&self) -> Result<Max> {
         let filename = "cgroup.max.descendants";
         let mut path = PathBuf::from(&self.path);
         path.push(filename);
@@ -170,6 +170,23 @@ impl <'a> CGroup<'a> {
     pub fn set_max_descendants(&self, max: u32) -> Result<()> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.max.descendants");
+        fs::write(path.as_path(), max.to_string())
+            .map_err(|e| CGroupError::FSErr(e))
+    }
+
+    ///cgroup.max.depth
+    pub fn max_depth(&self) -> Result<Max> {
+        let filename = "cgroup.max.depth";
+        let mut path = PathBuf::from(&self.path);
+        path.push(filename);
+        let content = read_file_into_string(path.as_path())?;
+        read_single_value(content)
+    }
+
+    ///cgroup.max.depth
+    pub fn set_max_depth(&self, max: u32) -> Result<()> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.max.depth");
         fs::write(path.as_path(), max.to_string())
             .map_err(|e| CGroupError::FSErr(e))
     }
@@ -226,22 +243,22 @@ impl FromStr for CGroupEvent {
 }
 
 #[derive(Debug)]
-pub enum MaxDescendants {
+pub enum Max {
     Max,
     Val(u32)
 }
 
-impl FromStr for MaxDescendants {
+impl FromStr for Max {
     type Err = CGroupError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let mut splits = s.split('\n');
         return match splits.next() {
-            Some("max") => Ok(MaxDescendants::Max),
+            Some("max") => Ok(Max::Max),
             Some(max) => {
                 let val = u32::from_str(max)
                     .map_err(|err| CGroupError::UnknownFieldErr(max.to_string()))?;
-                Ok(MaxDescendants::Val(val))
+                Ok(Max::Val(val))
             },
             None => Err(CGroupError::EmptyFileErr)
         }
