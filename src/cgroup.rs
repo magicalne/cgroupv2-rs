@@ -198,6 +198,22 @@ impl <'a> CGroup<'a> {
         let content = read_file_into_string(path.as_path())?;
         Ok(read_newline_separated_values(content))
     }
+
+    ///cgroup.freeze
+    pub fn freeze(&self) -> Result<Freeze> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.freeze");
+        let content = read_file_into_string(path.as_path())?;
+        read_single_value(content)
+    }
+
+    ///cgroup.freeze
+    pub fn set_freeze(&self) -> Result<()> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.freeze");
+        fs::write(path.as_path(), "1")
+            .map_err(|e| CGroupError::FSErr(e))
+    }
 }
 
 #[derive(Debug)]
@@ -298,5 +314,24 @@ impl FromStr for CGroupStat {
             }
         }
         return Err(CGroupError::UnknownFieldErr(String::from(s)))
+    }
+}
+
+#[derive(Debug)]
+pub struct Freeze(bool);
+
+impl FromStr for Freeze {
+    type Err = CGroupError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let mut splits = s.split('\n');
+        if let Some(s) = splits.next() {
+            return match s {
+                "0" => Ok(Freeze(false)),
+                "1" => Ok(Freeze(true)),
+                _ => Err(CGroupError::UnknownFieldErr(s.to_string()))
+            };
+        }
+        Err(CGroupError::UnknownFieldErr(s.to_string()))
     }
 }

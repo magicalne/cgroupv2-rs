@@ -126,6 +126,12 @@ mod tests {
         dbg!(result);
         let result = c_group.stat();
         dbg!(result);
+        let result = c_group.freeze();
+        dbg!(result);
+        let result = c_group.set_freeze();
+        dbg!(result);
+        let result = c_group.freeze();
+        dbg!(result);
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
     }
