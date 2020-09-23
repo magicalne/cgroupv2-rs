@@ -4,9 +4,11 @@ pub enum CGroupError {
     #[error("cannot open file")]
     FSErr(#[from] std::io::Error),
     #[error("unknown controller")]
-    UnknownField(String),
+    UnknownFieldErr(String),
+    #[error("file is empty")]
+    EmptyFileErr,
     #[error("write 0 byte")]
-    WriteZeroByte,
+    WriteZeroByteErr,
 
     #[error("the data for key `{0}` is not available")]
     Redaction(String),

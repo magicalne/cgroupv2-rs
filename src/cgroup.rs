@@ -109,7 +109,7 @@ impl <'a> CGroup<'a> {
         match file.write(&pid.to_string().as_bytes()) {
             Ok(size) => {
                 if size == 0 {
-                    Err(CGroupError::WriteZeroByte)
+                    Err(CGroupError::WriteZeroByteErr)
                 } else {
                     Ok(())
                 }
@@ -138,7 +138,7 @@ impl <'a> CGroup<'a> {
         match file.write(&tid.to_string().as_bytes()) {
             Ok(size) => {
                 if size == 0 {
-                    Err(CGroupError::WriteZeroByte)
+                    Err(CGroupError::WriteZeroByteErr)
                 } else {
                     Ok(())
                 }
@@ -155,6 +155,23 @@ impl <'a> CGroup<'a> {
         path.push("cgroup.events");
         let content = read_file_into_string(path.as_path())?;
         Ok(read_newline_separated_values(content))
+    }
+
+    ///cgroup.max.descendants
+    pub fn max_descendants(&self) -> Result<MaxDescendants> {
+        let filename = "cgroup.max.descendants";
+        let mut path = PathBuf::from(&self.path);
+        path.push(filename);
+        let content = read_file_into_string(path.as_path())?;
+        read_single_value(content)
+    }
+
+    ///cgroup.max.descendants
+    pub fn set_max_descendants(&self, max: u32) -> Result<()> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.max.descendants");
+        fs::write(path.as_path(), max.to_string())
+            .map_err(|e| CGroupError::FSErr(e))
     }
 }
 
@@ -175,7 +192,7 @@ impl FromStr for CGroupType {
             "domain threaded\n" => Ok(CGroupType::DomainThreaded),
             "domain invalid\n" => Ok(CGroupType::DomainInvalid),
             "threaded\n" => Ok(CGroupType::Threaded),
-            _ => Err(CGroupError::UnknownField(String::from(s)))
+            _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
         }
     }
 }
@@ -200,10 +217,33 @@ impl FromStr for CGroupEvent {
                 return match key {
                     "populated" => Ok(CGroupEvent::Populated(val)),
                     "frozen" => Ok(CGroupEvent::Frozen(val)),
-                    _ => Err(CGroupError::UnknownField(String::from(s)))
+                    _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
                 }
             }
         }
-        return Err(CGroupError::UnknownField(String::from(s)))
+        return Err(CGroupError::UnknownFieldErr(String::from(s)))
+    }
+}
+
+#[derive(Debug)]
+pub enum MaxDescendants {
+    Max,
+    Val(u32)
+}
+
+impl FromStr for MaxDescendants {
+    type Err = CGroupError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let mut splits = s.split('\n');
+        return match splits.next() {
+            Some("max") => Ok(MaxDescendants::Max),
+            Some(max) => {
+                let val = u32::from_str(max)
+                    .map_err(|err| CGroupError::UnknownFieldErr(max.to_string()))?;
+                Ok(MaxDescendants::Val(val))
+            },
+            None => Err(CGroupError::EmptyFileErr)
+        }
     }
 }

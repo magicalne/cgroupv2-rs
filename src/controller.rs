@@ -22,7 +22,7 @@ impl FromStr for ControllerType {
             "io" => Ok(ControllerType::IO),
             "memory" => Ok(ControllerType::MEMORY),
             "pids" => Ok(ControllerType::PIDS),
-            _ => Err(CGroupError::UnknownField(String::from(s)))
+            _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
         }
     }
 }
