@@ -124,6 +124,8 @@ mod tests {
         dbg!(result);
         let result = c_group.max_depth();
         dbg!(result);
+        let result = c_group.stat();
+        dbg!(result);
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
     }

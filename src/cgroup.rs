@@ -190,6 +190,14 @@ impl <'a> CGroup<'a> {
         fs::write(path.as_path(), max.to_string())
             .map_err(|e| CGroupError::FSErr(e))
     }
+
+    ///cgroup.stat
+    pub fn stat(&self) -> Result<Vec<CGroupStat>> {
+        let mut path = PathBuf::from(&self.path);
+        path.push("cgroup.stat");
+        let content = read_file_into_string(path.as_path())?;
+        Ok(read_newline_separated_values(content))
+    }
 }
 
 #[derive(Debug)]
@@ -262,5 +270,33 @@ impl FromStr for Max {
             },
             None => Err(CGroupError::EmptyFileErr)
         }
+    }
+}
+
+#[derive(Debug)]
+pub enum CGroupStat {
+    ///nr_descendants
+    NrDescendants(u32),
+    ///nr_dying_descendants
+    NrDyingDescendants(u32)
+}
+
+impl FromStr for CGroupStat {
+    type Err = CGroupError;
+
+    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
+        let mut splits = s.split_whitespace();
+        if let Some(key) = splits.next() {
+            if let Some(val) = splits.next() {
+                let val = u32::from_str(val)
+                    .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?;
+                return match key {
+                    "nr_descendants" => Ok(Self::NrDescendants(val)),
+                    "NrDyingDescendants" => Ok(Self::NrDyingDescendants(val)),
+                    _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
+                }
+            }
+        }
+        return Err(CGroupError::UnknownFieldErr(String::from(s)))
     }
 }
