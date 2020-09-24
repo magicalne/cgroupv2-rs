@@ -43,6 +43,3 @@ pub fn read_newline_separated_values<T: FromStr>(content: String) -> Vec<T>  {
         .collect()
 }
 
-pub fn read_single_value<T: FromStr>(content: String) -> std::result::Result<T, <T>::Err> {
-    T::from_str(&content[..])
-}

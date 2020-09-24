@@ -20,7 +20,6 @@ use crate::{
     util::{
         read_file_into_string,
         read_newline_separated_values,
-        read_single_value,
         read_space_separated_values,
     },
 };
@@ -89,7 +88,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.type");
         let content = read_file_into_string(path.as_path())?;
-        read_single_value(content)
+        CGroupType::from_str(&content)
     }
 
     ///cgruop.procs
@@ -152,11 +151,11 @@ impl<'a> CGroup<'a> {
     }
 
     ///cgroup.events
-    pub fn events(&self) -> Result<Vec<CGroupEvent>> {
+    pub fn events(&self) -> Result<CGroupEvent> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.events");
         let content = read_file_into_string(path.as_path())?;
-        Ok(read_newline_separated_values(content))
+        CGroupEvent::from_str(&content)
     }
 
     ///cgroup.max.descendants
@@ -165,7 +164,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push(filename);
         let content = read_file_into_string(path.as_path())?;
-        read_single_value(content)
+        Max::from_str(&content)
     }
 
     ///cgroup.max.descendants
@@ -182,7 +181,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push(filename);
         let content = read_file_into_string(path.as_path())?;
-        read_single_value(content)
+        Max::from_str(&content)
     }
 
     ///cgroup.max.depth
@@ -206,7 +205,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.freeze");
         let content = read_file_into_string(path.as_path())?;
-        read_single_value(content)
+        Freeze::from_str(&content)
     }
 
     ///cgroup.freeze
@@ -241,30 +240,45 @@ impl FromStr for CGroupType {
 }
 
 #[derive(Debug)]
-pub enum CGroupEvent {
-    Populated(bool),
-    Frozen(bool),
+pub struct CGroupEvent {
+    populated: bool,
+    frozen: bool,
+}
+
+impl CGroupEvent {
+    fn setter(&mut self, s: &str, val: bool) {
+        match s {
+            "populated" => self.populated = val,
+            "frozen" => self.frozen = val,
+            _ => {}
+        }
+    }
 }
 
 impl FromStr for CGroupEvent {
     type Err = CGroupError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let mut splits = s.split_whitespace();
-        if let Some(key) = splits.next() {
-            if let Some(val) = splits.next() {
-                let val = match val {
-                    "1" => true,
-                    _ => false
-                };
-                return match key {
-                    "populated" => Ok(CGroupEvent::Populated(val)),
-                    "frozen" => Ok(CGroupEvent::Frozen(val)),
-                    _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
-                };
-            }
+        let mut event = CGroupEvent {
+            populated: false,
+            frozen: false,
+        };
+        let mut splits = s.split('\n');
+        for _ in 0..2 {
+            let line = splits.next()
+                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+            let mut kv = line.split_whitespace();
+            let key = kv.next()
+                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+            let val = kv.next()
+                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+            let val = match val {
+                "1" => true,
+                _ => false
+            };
+            event.setter(key, val);
         }
-        return Err(CGroupError::UnknownFieldErr(String::from(s)));
+        Ok(event)
     }
 }
 
@@ -283,7 +297,7 @@ impl FromStr for Max {
             Some("max") => Ok(Max::Max),
             Some(max) => {
                 let val = u32::from_str(max)
-                    .map_err(|err| CGroupError::UnknownFieldErr(max.to_string()))?;
+                    .map_err(|_| CGroupError::UnknownFieldErr(max.to_string()))?;
                 Ok(Max::Val(val))
             }
             None => Err(CGroupError::EmptyFileErr)
@@ -315,7 +329,7 @@ impl FromStr for CGroupStat {
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
         let mut stat = CGroupStat {
             nr_descendants: 0,
-            nr_dying_descendants: 0
+            nr_dying_descendants: 0,
         };
         let mut splits = s.split('\n');
         for _ in 0..2 {
@@ -326,7 +340,7 @@ impl FromStr for CGroupStat {
                 .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
             let val = kv.next()
                 .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
-            let val =  u32::from_str(val)
+            let val = u32::from_str(val)
                 .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?;
             stat.setter(key, val);
         }

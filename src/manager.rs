@@ -105,8 +105,7 @@ mod tests {
         dbg!(result);
         let result = c_group.cg_type();
         dbg!(result);
-        let pid = std::process::id();
-        dbg!(pid);
+        // let pid = std::process::id();
         let result = c_group.procs();
         dbg!(result);
         let result = c_group.threads();
