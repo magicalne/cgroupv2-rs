@@ -1,17 +1,21 @@
-use users::{get_current_uid};
 use std::{
     fs,
-    path::{
-        PathBuf
-    }
+    path::PathBuf,
 };
-use crate::{error::Result};
-use crate::error::CGroupError;
-use crate::cgroup::CGroup;
+
+use users::get_current_uid;
+
+use crate::{
+    cgroup::CGroup,
+    error::{
+        CGroupError,
+        Result,
+    },
+};
 
 #[derive(Debug)]
-pub struct Manager{
-    path:  PathBuf
+pub struct Manager {
+    path: PathBuf
 }
 
 impl Manager {
@@ -27,9 +31,9 @@ impl Manager {
                 Ok(Manager {
                     path
                 })
-            },
+            }
             Err(err) => {
-                Err(CGroupError::FSErr(err))
+                Err(CGroupError::FSErr(err.kind()))
             }
         }
     }
@@ -39,8 +43,8 @@ impl Manager {
         path.push(cgroup_name);
         return match fs::remove_dir(path) {
             Ok(()) => Ok(()),
-            Err(err) => Err(CGroupError::FSErr(err))
-        }
+            Err(err) => Err(CGroupError::FSErr(err.kind()))
+        };
     }
 }
 
@@ -66,8 +70,9 @@ fn get_delegate_path(mount_point: &str) -> String {
 #[cfg(test)]
 #[allow(unused_must_use)]
 mod tests {
-    use crate::manager::Manager;
+    use crate::cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max};
     use crate::controller::ControllerType;
+    use crate::manager::Manager;
 
     #[test]
     fn enabled_controllers() {
@@ -91,48 +96,47 @@ mod tests {
         let manager = Manager::default();
         let child = manager.new_child("cgv2");
         assert!(child.is_ok());
-        dbg!(&child);
         let child = child.unwrap();
         let c_group = child.cgroup();
 
-        let enables = vec![ControllerType::CPU, ControllerType::MEMORY];
+        let enables = vec![ControllerType::MEMORY, ControllerType::PIDS];
         let disables = Some(vec![ControllerType::IO]);
         let result = c_group.set_subtree_control(enables, disables);
-        dbg!(result);
+        assert!(result.is_ok());
         let result = c_group.subtree_control();
-        dbg!(result);
+        assert_eq!(result, Ok(vec![ControllerType::MEMORY, ControllerType::PIDS]));
         let result = c_group.controllers();
-        dbg!(result);
+        assert_eq!(result, Ok(vec![ControllerType::MEMORY, ControllerType::PIDS]));
         let result = c_group.cg_type();
-        dbg!(result);
+        // assert_eq!(result, Ok::<Result<Vec<CGroupType>, CGroupError>>(CGroupType::Domain));
+        assert_eq!(result, Ok(CGroupType::Domain));
         // let pid = std::process::id();
         let result = c_group.procs();
-        dbg!(result);
+        assert_eq!(result, Ok(vec![]));
         let result = c_group.threads();
-        dbg!(result);
+        assert_eq!(result, Ok(vec![]));
         let result = c_group.events();
-        dbg!(result);
+        assert_eq!(result, Ok(CGroupEvent { populated: false, frozen: false }));
         let result = c_group.max_descendants();
-        dbg!(result);
+        assert_eq!(result, Ok(Max::Max));
         c_group.set_max_descendants(15);
         let result = c_group.max_descendants();
-        dbg!(result);
+        assert_eq!(result, Ok(Max::Val(15)));
         let result = c_group.max_depth();
-        dbg!(result);
+        assert_eq!(result, Ok(Max::Max));
         let result = c_group.set_max_depth(16);
-        dbg!(result);
+        assert!(result.is_ok());
         let result = c_group.max_depth();
-        dbg!(result);
+        assert_eq!(result, Ok(Max::Val(16)));
         let result = c_group.stat();
-        dbg!(result);
+        assert_eq!(result, Ok(CGroupStat { nr_descendants: 0, nr_dying_descendants: 0 }));
         let result = c_group.freeze();
-        dbg!(result);
+        assert_eq!(result, Ok(Freeze(false)));
         let result = c_group.set_freeze();
-        dbg!(result);
+        assert!(result.is_ok());
         let result = c_group.freeze();
-        dbg!(result);
+        assert_eq!(result, Ok(Freeze(true)));
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
     }
-
 }

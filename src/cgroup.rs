@@ -80,7 +80,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.subtree_control");
         fs::write(path.as_path(), line)
-            .map_err(|e| CGroupError::FSErr(e))
+            .map_err(|e| CGroupError::FSErr(e.kind()))
     }
 
     ///cgroup.type
@@ -106,7 +106,7 @@ impl<'a> CGroup<'a> {
         let mut file = OpenOptions::new()
             .append(true)
             .open(&path)
-            .map_err(|err| CGroupError::FSErr(err))?;
+            .map_err(|err| CGroupError::FSErr(err.kind()))?;
         match file.write(&pid.to_string().as_bytes()) {
             Ok(size) => {
                 if size == 0 {
@@ -116,7 +116,7 @@ impl<'a> CGroup<'a> {
                 }
             }
             Err(err) => {
-                Err(CGroupError::FSErr(err))
+                Err(CGroupError::FSErr(err.kind()))
             }
         }
     }
@@ -135,7 +135,7 @@ impl<'a> CGroup<'a> {
         let mut file = OpenOptions::new()
             .append(true)
             .open(&path)
-            .map_err(|err| CGroupError::FSErr(err))?;
+            .map_err(|err| CGroupError::FSErr(err.kind()))?;
         match file.write(&tid.to_string().as_bytes()) {
             Ok(size) => {
                 if size == 0 {
@@ -145,7 +145,7 @@ impl<'a> CGroup<'a> {
                 }
             }
             Err(err) => {
-                Err(CGroupError::FSErr(err))
+                Err(CGroupError::FSErr(err.kind()))
             }
         }
     }
@@ -172,7 +172,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.max.descendants");
         fs::write(path.as_path(), max.to_string())
-            .map_err(|e| CGroupError::FSErr(e))
+            .map_err(|e| CGroupError::FSErr(e.kind()))
     }
 
     ///cgroup.max.depth
@@ -189,7 +189,7 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.max.depth");
         fs::write(path.as_path(), max.to_string())
-            .map_err(|e| CGroupError::FSErr(e))
+            .map_err(|e| CGroupError::FSErr(e.kind()))
     }
 
     ///cgroup.stat
@@ -213,11 +213,11 @@ impl<'a> CGroup<'a> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.freeze");
         fs::write(path.as_path(), "1")
-            .map_err(|e| CGroupError::FSErr(e))
+            .map_err(|e| CGroupError::FSErr(e.kind()))
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum CGroupType {
     Domain,
     DomainThreaded,
@@ -239,10 +239,10 @@ impl FromStr for CGroupType {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct CGroupEvent {
-    populated: bool,
-    frozen: bool,
+    pub populated: bool,
+    pub frozen: bool,
 }
 
 impl CGroupEvent {
@@ -282,7 +282,7 @@ impl FromStr for CGroupEvent {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum Max {
     Max,
     Val(u32),
@@ -305,12 +305,12 @@ impl FromStr for Max {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct CGroupStat {
     ///nr_descendants
-    nr_descendants: u32,
+    pub nr_descendants: u32,
     ///nr_dying_descendants
-    nr_dying_descendants: u32,
+    pub nr_dying_descendants: u32,
 }
 
 impl CGroupStat {
@@ -348,8 +348,8 @@ impl FromStr for CGroupStat {
     }
 }
 
-#[derive(Debug)]
-pub struct Freeze(bool);
+#[derive(Debug, Eq, PartialEq)]
+pub struct Freeze(pub bool);
 
 impl FromStr for Freeze {
     type Err = CGroupError;

@@ -17,12 +17,12 @@ pub fn read_file_into_string(path: &Path) -> Result<String> {
                     Ok(buf)
                 },
                 Err(err) => {
-                    Err(CGroupError::FSErr(err))
+                    Err(CGroupError::FSErr(err.kind()))
                 }
             }
         },
         Err(err) => {
-            Err(CGroupError::FSErr(err))
+            Err(CGroupError::FSErr(err.kind()))
         }
     }
 }

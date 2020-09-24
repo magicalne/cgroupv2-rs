@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use crate::error::CGroupError;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ControllerType {
     CPUSET, CPU, IO, MEMORY, PIDS
 }

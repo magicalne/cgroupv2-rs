@@ -1,8 +1,8 @@
 use thiserror::Error;
-#[derive(Error, Debug)]
+#[derive(Error, Debug, Eq, PartialEq)]
 pub enum CGroupError {
     #[error("cannot open file")]
-    FSErr(#[from] std::io::Error),
+    FSErr(std::io::ErrorKind),
     #[error("unknown controller")]
     UnknownFieldErr(String),
     #[error("file is empty")]
