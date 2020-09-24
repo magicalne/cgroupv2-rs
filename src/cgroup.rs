@@ -194,11 +194,11 @@ impl<'a> CGroup<'a> {
     }
 
     ///cgroup.stat
-    pub fn stat(&self) -> Result<Vec<CGroupStat>> {
+    pub fn stat(&self) -> Result<CGroupStat> {
         let mut path = PathBuf::from(&self.path);
         path.push("cgroup.stat");
         let content = read_file_into_string(path.as_path())?;
-        Ok(read_newline_separated_values(content))
+        CGroupStat::from_str(&content)
     }
 
     ///cgroup.freeze
@@ -292,30 +292,45 @@ impl FromStr for Max {
 }
 
 #[derive(Debug)]
-pub enum CGroupStat {
+pub struct CGroupStat {
     ///nr_descendants
-    NrDescendants(u32),
+    nr_descendants: u32,
     ///nr_dying_descendants
-    NrDyingDescendants(u32),
+    nr_dying_descendants: u32,
+}
+
+impl CGroupStat {
+    fn setter(&mut self, s: &str, val: u32) {
+        match s {
+            "nr_descendants" => self.nr_descendants = val,
+            "nr_dying_descendants" => self.nr_dying_descendants = val,
+            _ => {}
+        }
+    }
 }
 
 impl FromStr for CGroupStat {
     type Err = CGroupError;
 
     fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let mut splits = s.split_whitespace();
-        if let Some(key) = splits.next() {
-            if let Some(val) = splits.next() {
-                let val = u32::from_str(val)
-                    .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?;
-                return match key {
-                    "nr_descendants" => Ok(Self::NrDescendants(val)),
-                    "NrDyingDescendants" => Ok(Self::NrDyingDescendants(val)),
-                    _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
-                };
-            }
+        let mut stat = CGroupStat {
+            nr_descendants: 0,
+            nr_dying_descendants: 0
+        };
+        let mut splits = s.split('\n');
+        for _ in 0..2 {
+            let line = splits.next()
+                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+            let mut kv = line.split_whitespace();
+            let key = kv.next()
+                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+            let val = kv.next()
+                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+            let val =  u32::from_str(val)
+                .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?;
+            stat.setter(key, val);
         }
-        return Err(CGroupError::UnknownFieldErr(String::from(s)));
+        Ok(stat)
     }
 }
 
