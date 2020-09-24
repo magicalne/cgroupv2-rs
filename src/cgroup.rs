@@ -1,39 +1,41 @@
 use std::{
     fs::{
         self,
-        OpenOptions
+        OpenOptions,
     },
-    str::FromStr,
+    io::Write,
     path::{
         Path,
-        PathBuf
-    }
-};
-use crate::{
-    error::{
-        Result,
-        CGroupError
+        PathBuf,
     },
+    str::FromStr,
+};
+
+use crate::{
     controller::ControllerType,
+    error::{
+        CGroupError,
+        Result,
+    },
     util::{
         read_file_into_string,
+        read_newline_separated_values,
         read_single_value,
         read_space_separated_values,
-        read_newline_separated_values
-    }
+    },
 };
-use std::io::Write;
 
 pub struct CGroup<'a> {
     path: &'a Path
 }
 
-impl <'a> CGroup<'a> {
+impl<'a> CGroup<'a> {
     pub fn new(path: &'a Path) -> Self {
         CGroup {
             path
         }
     }
+
     ///cgroup.controllers
     pub fn controllers(&self) -> Result<Vec<ControllerType>> {
         let mut path = PathBuf::from(&self.path);
@@ -52,14 +54,14 @@ impl <'a> CGroup<'a> {
 
     pub fn set_subtree_control(&self,
                                enables: Vec<ControllerType>,
-                               disables: Option<Vec<ControllerType>>
+                               disables: Option<Vec<ControllerType>>,
     ) -> Result<()> {
         let mut line: String = enables
             .iter()
             .map(|e| {
                 let mut s = e.to_string();
                 s.insert_str(0, "+");
-                return s
+                return s;
             })
             .collect::<Vec<String>>()
             .join(" ");
@@ -69,7 +71,7 @@ impl <'a> CGroup<'a> {
                 .map(|e| {
                     let mut s = e.to_string();
                     s.insert_str(0, "-");
-                    return s
+                    return s;
                 })
                 .collect::<Vec<String>>()
                 .join(" ");
@@ -113,7 +115,7 @@ impl <'a> CGroup<'a> {
                 } else {
                     Ok(())
                 }
-             },
+            }
             Err(err) => {
                 Err(CGroupError::FSErr(err))
             }
@@ -142,7 +144,7 @@ impl <'a> CGroup<'a> {
                 } else {
                     Ok(())
                 }
-            },
+            }
             Err(err) => {
                 Err(CGroupError::FSErr(err))
             }
@@ -221,7 +223,7 @@ pub enum CGroupType {
     Domain,
     DomainThreaded,
     DomainInvalid,
-    Threaded
+    Threaded,
 }
 
 impl FromStr for CGroupType {
@@ -234,14 +236,14 @@ impl FromStr for CGroupType {
             "domain invalid\n" => Ok(CGroupType::DomainInvalid),
             "threaded\n" => Ok(CGroupType::Threaded),
             _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
-        }
+        };
     }
 }
 
 #[derive(Debug)]
 pub enum CGroupEvent {
     Populated(bool),
-    Frozen(bool)
+    Frozen(bool),
 }
 
 impl FromStr for CGroupEvent {
@@ -259,17 +261,17 @@ impl FromStr for CGroupEvent {
                     "populated" => Ok(CGroupEvent::Populated(val)),
                     "frozen" => Ok(CGroupEvent::Frozen(val)),
                     _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
-                }
+                };
             }
         }
-        return Err(CGroupError::UnknownFieldErr(String::from(s)))
+        return Err(CGroupError::UnknownFieldErr(String::from(s)));
     }
 }
 
 #[derive(Debug)]
 pub enum Max {
     Max,
-    Val(u32)
+    Val(u32),
 }
 
 impl FromStr for Max {
@@ -283,9 +285,9 @@ impl FromStr for Max {
                 let val = u32::from_str(max)
                     .map_err(|err| CGroupError::UnknownFieldErr(max.to_string()))?;
                 Ok(Max::Val(val))
-            },
+            }
             None => Err(CGroupError::EmptyFileErr)
-        }
+        };
     }
 }
 
@@ -294,7 +296,7 @@ pub enum CGroupStat {
     ///nr_descendants
     NrDescendants(u32),
     ///nr_dying_descendants
-    NrDyingDescendants(u32)
+    NrDyingDescendants(u32),
 }
 
 impl FromStr for CGroupStat {
@@ -310,10 +312,10 @@ impl FromStr for CGroupStat {
                     "nr_descendants" => Ok(Self::NrDescendants(val)),
                     "NrDyingDescendants" => Ok(Self::NrDyingDescendants(val)),
                     _ => Err(CGroupError::UnknownFieldErr(String::from(s)))
-                }
+                };
             }
         }
-        return Err(CGroupError::UnknownFieldErr(String::from(s)))
+        return Err(CGroupError::UnknownFieldErr(String::from(s)));
     }
 }
 
