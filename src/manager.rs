@@ -72,6 +72,7 @@ fn get_delegate_path(mount_point: &str) -> String {
 mod tests {
     use crate::cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max};
     use crate::controller::ControllerType;
+    use crate::cpu::Stat;
     use crate::manager::Manager;
 
     #[test]
@@ -89,6 +90,8 @@ mod tests {
         let c_group = manager.cgroup();
         let result = c_group.subtree_control();
         assert!(result.is_ok());
+        let result = c_group.set_subtree_control(ControllerType::all(), None);
+        dbg!(result);
     }
 
     #[test]
@@ -138,5 +141,25 @@ mod tests {
         assert_eq!(result, Ok(Freeze(true)));
         let result = manager.delete_child("cgv2");
         assert!(result.is_ok())
+    }
+
+    #[test]
+    fn cpu_test() {
+        let manager = Manager::default();
+        let cgroup_name = "mycgv2";
+        let result = manager.new_child(cgroup_name);
+        let child = result.unwrap();
+        let c_group = child.cgroup();
+        let cpu = c_group.cpu();
+        let stat = cpu.stat();
+        let expect = Ok(Stat {
+            usage_usec: 0,
+            user_usec: 0,
+            system_usec: 0,
+            nr_periods: 0,
+            nr_throttled: 0,
+            throttled_usec: 0});
+        assert_eq!(stat, expect);
+        manager.delete_child(cgroup_name);
     }
 }

@@ -3,6 +3,7 @@ pub mod error;
 pub mod util;
 pub mod controller;
 pub mod cgroup;
+pub mod cpu;
 
 /// This is a native rust lib for (cgroup V2)[https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html].
 /// The default base path of cgroup should be **/sys/fs/cgroup**. Or you can mount a new fs if you

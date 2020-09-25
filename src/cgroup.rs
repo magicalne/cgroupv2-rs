@@ -23,6 +23,7 @@ use crate::{
         read_space_separated_values,
     },
 };
+use crate::cpu::Cpu;
 
 pub struct CGroup<'a> {
     path: &'a Path
@@ -214,6 +215,11 @@ impl<'a> CGroup<'a> {
         path.push("cgroup.freeze");
         fs::write(path.as_path(), "1")
             .map_err(|e| CGroupError::FSErr(e.kind()))
+    }
+
+    ///cpu
+    pub fn cpu(&self) -> Cpu {
+        Cpu::new(self.path)
     }
 }
 
