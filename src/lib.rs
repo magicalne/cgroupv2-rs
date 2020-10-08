@@ -4,6 +4,7 @@ pub mod util;
 pub mod controller;
 pub mod cgroup;
 pub mod cpu;
+pub mod psi;
 
 /// This is a native rust lib for (cgroup V2)[https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html].
 /// The default base path of cgroup should be **/sys/fs/cgroup**. Or you can mount a new fs if you
@@ -13,7 +14,7 @@ pub mod cpu;
 /// # mkdir -p /etc/systemd/system/user@.service.d
 /// # cat > /etc/systemd/system/user@.service.d/delegate.conf << EOF
 /// [Service]
-/// Delegate=cpu Cpuset io memory pids
+/// Delegate=cpu cpuset io memory pids
 /// EOF
 /// # systemctl daemon-reload
 /// ```
@@ -22,7 +23,9 @@ pub mod cpu;
 /// Constrains:
 /// Non-root cgroups can distribute domain resources to their children only when they don’t have any
 /// processes of their own. In other words, only domain cgroups which don’t contain any processes
-/// can have domain controllers enabled in their “cgroup.subtree_control” files.
+/// can have domain controllers enabled in their "cgroup.subtree_control" files.
+/// In my case, the root privilege is still necessary if you want to enable "cpuset" in
+/// cgroup.subtree_control.
 /// TODO
 
 pub trait FlatKeyedSetter<T> {

@@ -12,6 +12,8 @@ use crate::{
     FlatKeyedSetter
 };
 use crate::util::{write_single_value, read_flat_keyed_file};
+use std::str::FromStr;
+use crate::error::CGroupError;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Cpu<'a> {
@@ -35,9 +37,33 @@ impl<'a> Cpu<'a> {
         read_single_value(&self.path, filename)
     }
 
-    pub fn set_weight(&self, weight: u16) -> Result<()> {
+    pub fn set_weight(&self, w: u16) -> Result<()> {
         let filename = "cpu.weight";
-        write_single_value(&self.path, filename, weight)
+        write_single_value(&self.path, filename, w)
+    }
+
+    pub fn weight_nice(&self) -> Result<i8> {
+        let filename = "cpu.weight.nice";
+        read_single_value(&self.path, filename)
+    }
+
+    pub fn set_weight_nice(&self, n: i8) -> Result<()> {
+        let filename = "cpu.weight.nice";
+        write_single_value(&self.path, filename, n)
+    }
+
+    pub fn max(&self) -> Result<CPUMax> {
+        let filename = "cpu.max";
+        read_single_value(&self.path, filename)
+    }
+
+    pub fn set_max(&self, max: u32, period: Option<u32>) -> Result<()> {
+        let filename = "cpu.max";
+        let max = CPUMax {
+            max: CPUMaxMax::Val(max),
+            period
+        };
+        write_single_value(&self.path, filename, max)
     }
 }
 
@@ -76,6 +102,61 @@ impl FlatKeyedSetter<u64> for Stat {
             "throttled_usec" => self.throttled_usec = val,
 
             _ => {}
+        }
+    }
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub struct CPUMax {
+    pub max: CPUMaxMax,
+    pub period: Option<u32>
+}
+
+#[derive(Debug, Eq, PartialEq)]
+pub enum CPUMaxMax {
+    Max,
+    Val(u32)
+}
+
+impl ToString for CPUMaxMax {
+    fn to_string(&self) -> String {
+        match self {
+            CPUMaxMax::Max => String::from("max"),
+            CPUMaxMax::Val(max) => max.to_string()
+        }
+    }
+}
+
+impl FromStr for CPUMax {
+    type Err = CGroupError;
+
+    fn from_str(s: &str) -> Result<Self> {
+        let mut kv = s.split_whitespace();
+        let max = kv.next()
+            .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
+        let max = match max {
+            "max" => CPUMaxMax::Max,
+            _ => CPUMaxMax::Val(u32::from_str(max)
+                .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?)
+        };
+        let period = kv.next()
+            .ok_or(CGroupError::UnknownFieldErr(s.to_string()))?;
+        let period = Some(u32::from_str(period)
+            .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?);
+        Ok(CPUMax {
+            max,
+            period
+        })
+    }
+}
+
+impl ToString for CPUMax {
+    fn to_string(&self) -> String {
+        let max = self.max.to_string();
+        return if let Some(period) = self.period {
+            format!("{} {}", max, period.to_string())
+        } else {
+            max
         }
     }
 }

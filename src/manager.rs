@@ -72,7 +72,7 @@ fn get_delegate_path(mount_point: &str) -> String {
 mod tests {
     use crate::cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max};
     use crate::controller::ControllerType;
-    use crate::cpu::Stat;
+    use crate::cpu::{Stat, CPUMax, CPUMaxMax};
     use crate::manager::Manager;
 
     #[test]
@@ -160,6 +160,23 @@ mod tests {
             nr_throttled: 0,
             throttled_usec: 0});
         assert_eq!(stat, expect);
+
+        let weight = cpu.set_weight(20);
+        assert_eq!(weight, Ok(()));
+        let weight = cpu.weight();
+        assert_eq!(weight, Ok(20));
+
+        let weight_nice = cpu.set_weight_nice(-1);
+        assert_eq!(weight_nice, Ok(()));
+        let weight_nice = cpu.weight_nice();
+        assert_eq!(weight_nice, Ok(-1));
+
+        let max = cpu.max();
+        assert_eq!(max, Ok(CPUMax{max: CPUMaxMax::Max, period: Some(100000)}));
+        let set_max = cpu.set_max(u32::max_value(), None);
+        assert_eq!(set_max, Ok(()));
+        let max = cpu.max();
+        assert_eq!(max, Ok(CPUMax{max: CPUMaxMax::Val(u32::max_value()), period: Some(100000)}));
         manager.delete_child(cgroup_name);
     }
 }
