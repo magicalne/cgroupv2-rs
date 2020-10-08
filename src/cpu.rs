@@ -1,18 +1,17 @@
 use std::{
-    path::{
-        Path,
-        PathBuf,
-    },
-    str::FromStr,
+    path::Path,
 };
 
 use crate::{
     error::{
-        CGroupError,
         Result,
     },
-    util::read_file_into_string,
+    util::{
+        read_single_value
+    },
+    FlatKeyedSetter
 };
+use crate::util::{write_single_value, read_flat_keyed_file};
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Cpu<'a> {
@@ -28,10 +27,17 @@ impl<'a> Cpu<'a> {
 
     pub fn stat(&self) -> Result<Stat> {
         let filename = "cpu.stat";
-        let mut path = PathBuf::from(&self.path);
-        path.push(filename);
-        let content = read_file_into_string(path.as_path())?;
-        Stat::from_str(&content)
+        read_flat_keyed_file(&self.path, filename)
+    }
+
+    pub fn weight(&self) -> Result<u16> {
+        let filename = "cpu.weight";
+        read_single_value(&self.path, filename)
+    }
+
+    pub fn set_weight(&self, weight: u16) -> Result<()> {
+        let filename = "cpu.weight";
+        write_single_value(&self.path, filename, weight)
     }
 }
 
@@ -47,8 +53,19 @@ pub struct Stat {
     pub throttled_usec: u64,
 }
 
-impl Stat {
-    fn setter(&mut self, s: &str, val: u64) {
+impl FlatKeyedSetter<u64> for Stat {
+    fn new() -> Self {
+        Stat {
+            usage_usec: 0,
+            user_usec: 0,
+            system_usec: 0,
+            nr_periods: 0,
+            nr_throttled: 0,
+            throttled_usec: 0,
+        }
+    }
+
+    fn set(&mut self, s: &str, val: u64) {
         match s {
             "usage_usec" => self.usage_usec = val,
             "user_usec" => self.user_usec = val,
@@ -60,35 +77,5 @@ impl Stat {
 
             _ => {}
         }
-    }
-}
-
-impl FromStr for Stat {
-    type Err = CGroupError;
-
-    fn from_str(s: &str) -> std::result::Result<Self, Self::Err> {
-        let mut stat = Stat {
-            usage_usec: 0,
-            user_usec: 0,
-            system_usec: 0,
-            nr_periods: 0,
-            nr_throttled: 0,
-            throttled_usec: 0,
-        };
-        let mut splits = s.split('\n');
-        while let Some(line) = splits.next() {
-            if line.is_empty() {
-                break
-            }
-            let mut kv = line.split_whitespace();
-            let key = kv.next()
-                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
-            let val = kv.next()
-                .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
-            let val = u64::from_str(val)
-                .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?;
-            stat.setter(key, val);
-        }
-        Ok(stat)
     }
 }

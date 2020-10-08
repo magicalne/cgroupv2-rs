@@ -25,6 +25,11 @@ pub mod cpu;
 /// can have domain controllers enabled in their “cgroup.subtree_control” files.
 /// TODO
 
+pub trait FlatKeyedSetter<T> {
+    fn new() -> Self;
+    fn set(&mut self, s: &str, val: T);
+}
+
 #[cfg(test)]
 mod tests {
 
