@@ -1,19 +1,18 @@
 use std::{
     path::Path,
+    str::FromStr,
 };
 
 use crate::{
     error::{
-        Result,
+        CGroupError, Result,
     },
+    FlatKeyedSetter,
+    psi::CPUPressure,
     util::{
-        read_single_value
+        read_flat_keyed_file, read_single_value, write_single_value,
     },
-    FlatKeyedSetter
 };
-use crate::util::{write_single_value, read_flat_keyed_file};
-use std::str::FromStr;
-use crate::error::CGroupError;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Cpu<'a> {
@@ -61,9 +60,14 @@ impl<'a> Cpu<'a> {
         let filename = "cpu.max";
         let max = CPUMax {
             max: CPUMaxMax::Val(max),
-            period
+            period,
         };
         write_single_value(&self.path, filename, max)
+    }
+
+    pub fn pressure(&self) -> Result<CPUPressure> {
+        let filename = "cpu.pressure";
+        read_single_value(&self.path, filename)
     }
 }
 
@@ -109,13 +113,13 @@ impl FlatKeyedSetter<u64> for Stat {
 #[derive(Debug, Eq, PartialEq)]
 pub struct CPUMax {
     pub max: CPUMaxMax,
-    pub period: Option<u32>
+    pub period: Option<u32>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum CPUMaxMax {
     Max,
-    Val(u32)
+    Val(u32),
 }
 
 impl ToString for CPUMaxMax {
@@ -145,7 +149,7 @@ impl FromStr for CPUMax {
             .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?);
         Ok(CPUMax {
             max,
-            period
+            period,
         })
     }
 }
@@ -157,6 +161,6 @@ impl ToString for CPUMax {
             format!("{} {}", max, period.to_string())
         } else {
             max
-        }
+        };
     }
 }

@@ -74,6 +74,7 @@ mod tests {
     use crate::controller::ControllerType;
     use crate::cpu::{Stat, CPUMax, CPUMaxMax};
     use crate::manager::Manager;
+    use crate::psi::{CPUPressure, PSIMetric};
 
     #[test]
     fn enabled_controllers() {
@@ -146,7 +147,7 @@ mod tests {
     #[test]
     fn cpu_test() {
         let manager = Manager::default();
-        let cgroup_name = "mycgv2";
+        let cgroup_name = "omycgv2";
         let result = manager.new_child(cgroup_name);
         let child = result.unwrap();
         let c_group = child.cgroup();
@@ -177,6 +178,17 @@ mod tests {
         assert_eq!(set_max, Ok(()));
         let max = cpu.max();
         assert_eq!(max, Ok(CPUMax{max: CPUMaxMax::Val(u32::max_value()), period: Some(100000)}));
+
+        let pressure = cpu.pressure();
+        let expect = CPUPressure {
+            some: PSIMetric {
+                avg10: 0.0,
+                avg60: 0.0,
+                avg300: 0.0,
+                total: 0
+            }
+        };
+        assert_eq!(pressure, Ok(expect));
         manager.delete_child(cgroup_name);
     }
 }
