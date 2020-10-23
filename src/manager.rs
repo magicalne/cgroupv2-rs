@@ -72,9 +72,11 @@ fn get_delegate_path(mount_point: &str) -> String {
 mod tests {
     use crate::cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max};
     use crate::controller::ControllerType;
-    use crate::cpu::{Stat, CPUMax, CPUMaxMax};
+    use crate::cpu::{Stat, CPUMax};
     use crate::manager::Manager;
     use crate::psi::{CPUPressure, PSIMetric};
+    use crate::memory::{Event, SwapEvent};
+    use crate::FlatKeyedSetter;
 
     #[test]
     fn enabled_controllers() {
@@ -147,7 +149,8 @@ mod tests {
     #[test]
     fn cpu_test() {
         let manager = Manager::default();
-        let cgroup_name = "omycgv2";
+        let cgroup_name = "mycgv2";
+        manager.delete_child(cgroup_name);
         let result = manager.new_child(cgroup_name);
         let child = result.unwrap();
         let c_group = child.cgroup();
@@ -173,15 +176,16 @@ mod tests {
         assert_eq!(weight_nice, Ok(-1));
 
         let max = cpu.max();
-        assert_eq!(max, Ok(CPUMax{max: CPUMaxMax::Max, period: Some(100000)}));
+        assert_eq!(max, Ok(CPUMax{max: crate::common::Max::Max, period: Some(100000)}));
         let set_max = cpu.set_max(u32::max_value(), None);
         assert_eq!(set_max, Ok(()));
         let max = cpu.max();
-        assert_eq!(max, Ok(CPUMax{max: CPUMaxMax::Val(u32::max_value()), period: Some(100000)}));
+        assert_eq!(max, Ok(CPUMax{max: crate::common::Max::Val(u32::max_value()), period: Some(100000)}));
 
         let pressure = cpu.pressure();
         let expect = CPUPressure {
             some: PSIMetric {
+                key: "some".to_string(),
                 avg10: 0.0,
                 avg60: 0.0,
                 avg300: 0.0,
@@ -191,4 +195,81 @@ mod tests {
         assert_eq!(pressure, Ok(expect));
         manager.delete_child(cgroup_name);
     }
+
+    #[test]
+    fn memory_test() {
+        let manager = Manager::default();
+        let cgroup_name = "mycgv2";
+        let _ = manager.delete_child(cgroup_name);
+        let result = manager.new_child(cgroup_name);
+        let child = result.unwrap();
+        let c_group = child.cgroup();
+        let memory = c_group.memory();
+        let result = memory.current();
+        assert_eq!(result, Ok(0));
+
+        let result = memory.set_min(4096);
+        assert_eq!(result, Ok(()));
+        let min = memory.min();
+        assert_eq!(min, Ok(4096));
+
+        let result = memory.set_low(4096);
+        assert_eq!(result, Ok(()));
+        let low = memory.low();
+        assert_eq!(low, Ok(4096));
+
+        let result = memory.set_high(8192);
+        assert_eq!(result, Ok(()));
+        let high = memory.high();
+        assert_eq!(high, Ok(8192));
+
+        let result = memory.set_max(8192);
+        assert_eq!(result, Ok(()));
+        let max = memory.max();
+        assert_eq!(max, Ok(crate::common::Max::Val(8192)));
+
+        let result = memory.set_oom_group(1);
+        assert_eq!(result, Ok(()));
+        let oom_group = memory.oom_group();
+        assert_eq!(oom_group, Ok(1));
+
+        let events = memory.events();
+        assert_eq!(events, Ok(Event::new()));
+
+        let events = memory.events_local();
+        assert_eq!(events, Ok(Event::new()));
+
+        let stat = memory.stat();
+        assert!(stat.is_ok());
+
+        let result = memory.swap_current();
+        assert_eq!(result, Ok(0));
+
+        let swap_high = memory.swap_high();
+        assert_eq!(swap_high, Ok(crate::common::Max::Max));
+        let result = memory.set_swap_high(8192);
+        assert!(result.is_ok());
+        let swap_high = memory.swap_high();
+        assert_eq!(swap_high, Ok(crate::common::Max::Val(8192)));
+
+        let swap_max = memory.swap_max();
+        assert_eq!(swap_max, Ok(crate::common::Max::Max));
+        let result = memory.set_swap_max(8192);
+        assert!(result.is_ok());
+        let swap_high = memory.swap_max();
+        assert_eq!(swap_high, Ok(crate::common::Max::Val(8192)));
+
+        let swap_events = memory.swap_events();
+        assert_eq!(swap_events, Ok(SwapEvent {
+            high: 0,
+            max: 0,
+            fail: 0
+        }));
+
+        let pressure = memory.pressure();
+        dbg!(pressure);
+        manager.delete_child(cgroup_name);
+
+    }
+
 }

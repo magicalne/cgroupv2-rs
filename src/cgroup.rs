@@ -24,6 +24,7 @@ use crate::{
     },
 };
 use crate::cpu::Cpu;
+use crate::memory::Memory;
 
 pub struct CGroup<'a> {
     path: &'a Path
@@ -220,6 +221,11 @@ impl<'a> CGroup<'a> {
     ///cpu
     pub fn cpu(&self) -> Cpu {
         Cpu::new(self.path)
+    }
+
+    ///memory
+    pub fn memory(&self) -> Memory {
+        Memory::new(self.path)
     }
 }
 

@@ -13,6 +13,7 @@ use crate::{
         read_flat_keyed_file, read_single_value, write_single_value,
     },
 };
+use crate::common::Max;
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct Cpu<'a> {
@@ -59,7 +60,7 @@ impl<'a> Cpu<'a> {
     pub fn set_max(&self, max: u32, period: Option<u32>) -> Result<()> {
         let filename = "cpu.max";
         let max = CPUMax {
-            max: CPUMaxMax::Val(max),
+            max: Max::Val(max),
             period,
         };
         write_single_value(&self.path, filename, max)
@@ -69,6 +70,17 @@ impl<'a> Cpu<'a> {
         let filename = "cpu.pressure";
         read_single_value(&self.path, filename)
     }
+
+    // uclamp
+    // pub fn uclamp_min(&self) -> Result<f32> {
+    //     let filename = "cpu.uclamp.min";
+    //     read_single_value(&self.path, filename)
+    // }
+    //
+    // pub fn set_uclamp_min(&self, min: f32) -> Result<()> {
+    //     let filename = "cpu.uclamp.min";
+    //     write_single_value(&self.path, filename, min)
+    // }
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -112,23 +124,8 @@ impl FlatKeyedSetter<u64> for Stat {
 
 #[derive(Debug, Eq, PartialEq)]
 pub struct CPUMax {
-    pub max: CPUMaxMax,
+    pub max: Max,
     pub period: Option<u32>,
-}
-
-#[derive(Debug, Eq, PartialEq)]
-pub enum CPUMaxMax {
-    Max,
-    Val(u32),
-}
-
-impl ToString for CPUMaxMax {
-    fn to_string(&self) -> String {
-        match self {
-            CPUMaxMax::Max => String::from("max"),
-            CPUMaxMax::Val(max) => max.to_string()
-        }
-    }
 }
 
 impl FromStr for CPUMax {
@@ -138,11 +135,7 @@ impl FromStr for CPUMax {
         let mut kv = s.split_whitespace();
         let max = kv.next()
             .ok_or(CGroupError::UnknownFieldErr(String::from(s)))?;
-        let max = match max {
-            "max" => CPUMaxMax::Max,
-            _ => CPUMaxMax::Val(u32::from_str(max)
-                .map_err(|_| CGroupError::UnknownFieldErr(s.to_string()))?)
-        };
+        let max = Max::from_str(max)?;
         let period = kv.next()
             .ok_or(CGroupError::UnknownFieldErr(s.to_string()))?;
         let period = Some(u32::from_str(period)

@@ -12,6 +12,7 @@ use crate::error::{
     Result,
 };
 use crate::FlatKeyedSetter;
+use std::collections::HashMap;
 
 pub fn read_file_into_string(path: &Path) -> Result<String> {
     match std::fs::File::open(path) {
@@ -60,6 +61,14 @@ pub fn read_single_value<T: FromStr>(parent: &Path, filename: &str) -> Result<T>
     Err(CGroupError::UnknownFieldErr(content))
 }
 
+pub fn read_value<T: FromStr>(parent: &Path, filename: &str) -> Result<T> {
+    let mut path = PathBuf::from(parent);
+    path.push(filename);
+    let content = read_file_into_string(&path)?;
+    Ok(T::from_str(content.as_str())
+        .map_err(|_| CGroupError::UnknownFieldErr(content))?)
+}
+
 pub fn write_single_value<T: ToString>(parent: &Path, filename: &str, t: T) -> Result<()> {
     let mut path = PathBuf::from(parent);
     path.push(filename);
@@ -90,4 +99,28 @@ pub fn read_flat_keyed_file<V, T>(parent: &Path, filename: &str) -> Result<T>
         t.set(key, val);
     }
     Ok(t)
+}
+
+pub fn read_flat_keyed_file_map<V>(parent: &Path, filename: &str) -> Result<HashMap<String, V>>
+    where V: FromStr
+{
+    let mut path = PathBuf::from(parent);
+    path.push(filename);
+    let content = read_file_into_string(&path)?;
+    let mut map = HashMap::new();
+    let mut splits = content.split('\n');
+    while let Some(line) = splits.next() {
+        if line.is_empty() {
+            break
+        }
+        let mut kv = line.split_whitespace();
+        let key = kv.next()
+            .ok_or(CGroupError::UnknownFieldErr(content.to_string()))?;
+        let val = kv.next()
+            .ok_or(CGroupError::UnknownFieldErr(content.to_string()))?;
+        let val = V::from_str(val)
+            .map_err(|_| CGroupError::UnknownFieldErr(content.to_string()))?;
+        map.insert(key.to_string(), val);
+    }
+    Ok(map)
 }
