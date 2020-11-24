@@ -70,13 +70,14 @@ fn get_delegate_path(mount_point: &str) -> String {
 #[cfg(test)]
 #[allow(unused_must_use)]
 mod tests {
-    use crate::cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max};
+    use crate::{psi::MemoryPressure, cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max}};
     use crate::controller::ControllerType;
     use crate::cpu::{Stat, CPUMax};
     use crate::manager::Manager;
     use crate::psi::{CPUPressure, PSIMetric};
     use crate::memory::{Event, SwapEvent};
     use crate::FlatKeyedSetter;
+    use std::process::Command;
 
     #[test]
     fn enabled_controllers() {
@@ -267,9 +268,25 @@ mod tests {
         }));
 
         let pressure = memory.pressure();
-        dbg!(pressure);
-        manager.delete_child(cgroup_name);
+        let expect= MemoryPressure {
+            some: PSIMetric {
+                key: "some".to_string(),
+                avg10: 0.0,
+                avg60: 0.0,
+                avg300: 0.0,
+                total: 0
+            },
+            full: PSIMetric {
+                key: "full".to_string(),
+                avg10: 0.0,
+                avg60: 0.0,
+                avg300: 0.0,
+                total: 0
+            },
+        };
+        assert_eq!(pressure, Ok(expect));
 
+        manager.delete_child(cgroup_name);
     }
 
 }

@@ -7,6 +7,7 @@ pub mod cpu;
 pub mod psi;
 pub mod memory;
 pub mod common;
+pub mod io;
 
 /// This is a native rust lib for (cgroup V2)[https://www.kernel.org/doc/html/latest/admin-guide/cgroup-v2.html].
 /// The default base path of cgroup should be **/sys/fs/cgroup**. Or you can mount a new fs if you

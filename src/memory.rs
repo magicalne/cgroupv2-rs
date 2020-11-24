@@ -1,18 +1,10 @@
 use std::{
     path::Path,
-    str::FromStr,
 };
 
-use crate::{
-    error::{
-        CGroupError, Result,
-    },
-    FlatKeyedSetter,
-    psi::CPUPressure,
-    util::{
-        read_flat_keyed_file, read_single_value, write_single_value,
-    },
-};
+use crate::{FlatKeyedSetter, error::{
+        Result,
+    }, util::{read_flat_keyed_file, read_nested_keyed_file_to_map, read_single_value, write_single_value}};
 use crate::common::Max;
 use std::collections::HashMap;
 use crate::util::{read_flat_keyed_file_map, read_value};
@@ -33,6 +25,7 @@ impl<'a> Memory<'a> {
     pub fn current(&self) -> Result<u64> {
         let filename = "memory.current";
         read_single_value(&self.path, filename)
+
     }
 
     pub fn min(&self) -> Result<u64> {
@@ -98,6 +91,11 @@ impl<'a> Memory<'a> {
     pub fn stat(&self) -> Result<HashMap<String, u64>> {
         let filename = "memory.stat";
         read_flat_keyed_file_map(&self.path, filename)
+    }
+
+    pub fn numa_stat(&self) -> Result<HashMap<String, HashMap<String, u32>>> {
+        let filename = "memory.numa_stat";
+        read_nested_keyed_file_to_map(&self.path, filename)
     }
 
     pub fn swap_current(&self) -> Result<u64> {
