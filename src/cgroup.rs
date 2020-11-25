@@ -11,18 +11,14 @@ use std::{
     str::FromStr,
 };
 
-use crate::{
-    controller::ControllerType,
-    error::{
+use crate::{controller::ControllerType, io::IO, error::{
         CGroupError,
         Result,
-    },
-    util::{
+    }, util::{
         read_file_into_string,
         read_newline_separated_values,
         read_space_separated_values,
-    },
-};
+    }};
 use crate::cpu::Cpu;
 use crate::memory::Memory;
 
@@ -226,6 +222,11 @@ impl<'a> CGroup<'a> {
     ///memory
     pub fn memory(&self) -> Memory {
         Memory::new(self.path)
+    }
+
+    ///io
+    pub fn io(&self) -> IO {
+        IO::new(self.path)
     }
 }
 

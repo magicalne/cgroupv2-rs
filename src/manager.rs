@@ -71,13 +71,13 @@ fn get_delegate_path(mount_point: &str) -> String {
 #[allow(unused_must_use)]
 mod tests {
     use crate::{psi::MemoryPressure, cgroup::{CGroupEvent, CGroupStat, CGroupType, Freeze, Max}};
+    use crate::error::Result;
     use crate::controller::ControllerType;
     use crate::cpu::{Stat, CPUMax};
     use crate::manager::Manager;
     use crate::psi::{CPUPressure, PSIMetric};
     use crate::memory::{Event, SwapEvent};
     use crate::FlatKeyedSetter;
-    use std::process::Command;
 
     #[test]
     fn enabled_controllers() {
@@ -289,4 +289,24 @@ mod tests {
         manager.delete_child(cgroup_name);
     }
 
+    #[test]
+    fn cgroup_io_test() -> Result<()> {
+        
+        let manager = Manager::default();
+        let cgroup_name = "mycgv2";
+        let _ = manager.delete_child(cgroup_name);
+        let child= manager.new_child(cgroup_name)?;
+        let c_group = child.cgroup();
+        let io = c_group.io();
+
+
+        let stat = io.stat()?;
+        let root= manager.cgroup();
+        let root_io = root.io();
+        let cost_qos = root_io.cost_qos()?;
+        dbg!(cost_qos);
+        manager.delete_child(cgroup_name);
+
+        Ok(())
+    }
 }
